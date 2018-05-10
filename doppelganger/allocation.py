@@ -40,24 +40,34 @@ CountInformation = namedtuple('CountInformation', ['tract', 'count'])
 
 class HouseholdAllocator(object):
 
+    # Our trade-off coefficient gamma
+    # Low values (~1) mean we trust our initial weights, high values
+    # (~10000) mean want to fit the marginals.
+    GAMMA = 100.
+
     @staticmethod
-    def from_csvs(households_csv, persons_csv):
+    def from_csvs(households_csv, persons_csv, gamma=None):
         """Load saved household and person allocations.
 
         Args:
             households_csv (unicode): path to households file
             persons_csv (unicode): path to persons file
+            gamma Alternative gamma Low values (~1) mean we trust the total PUMA weights, high values
+                (~10000) mean want to fit the marginals.
 
         Returns:
             HouseholdAllocator: allocated persons & households_csv
 
         """
+        if gamma is not None:
+            HouseholdAllocator.GAMMA = gamma
+
         allocated_households = pandas.read_csv(households_csv)
         allocated_persons = pandas.read_csv(persons_csv)
         return HouseholdAllocator(allocated_households, allocated_persons)
 
     @staticmethod
-    def from_cleaned_data(marginals, households_data, persons_data):
+    def from_cleaned_data(marginals, households_data, persons_data, gamma=None):
         """Allocate households based on the given data.
 
         marginals (Marginals): controls to match when allocating
@@ -65,7 +75,12 @@ class HouseholdAllocator(object):
             DEFAULT_HOUSEHOLD_FIELDS.
         persons_data (CleanedData): data about persons.  Must contain
             DEFAULT_PERSON_FIELDS.
+        gamma Alternative gamma Low values (~1) mean we trust the total PUMA weights, high values
+            (~10000) mean want to fit the marginals.
         """
+        if gamma is not None:
+            HouseholdAllocator.GAMMA = gamma
+
         for field in DEFAULT_HOUSEHOLD_FIELDS:
             assert field.name in households_data.data, \
                 'Missing required field {}'.format(field.name)
@@ -164,16 +179,12 @@ class HouseholdAllocator(object):
         mu_extend = np.mat(np.tile(mu, (n_tracts, 1)))
         B = np.mat(np.dot(np.ones((1, n_tracts)), A)[0])
 
-        # Our trade-off coefficient gamma
-        # Low values (~1) mean we trust our initial weights, high values
-        # (~10000) mean want to fit the marginals.
-        gamma = 100.
 
         # Meta-balancing coefficient
         meta_gamma = 100.
 
         hh_weights = balance_multi_cvx(
-            hh_table, A, B, w_extend, gamma * mu_extend.T, meta_gamma
+            hh_table, A, B, w_extend, HouseholdAllocator.GAMMA * mu_extend.T, meta_gamma
         )
 
         # We're running discretization independently for each tract
