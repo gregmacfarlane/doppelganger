@@ -46,21 +46,17 @@ class HouseholdAllocator(object):
     GAMMA = 100.
 
     @staticmethod
-    def from_csvs(households_csv, persons_csv, gamma=None):
+    def from_csvs(households_csv, persons_csv):
         """Load saved household and person allocations.
 
         Args:
             households_csv (unicode): path to households file
             persons_csv (unicode): path to persons file
-            gamma Alternative gamma Low values (~1) mean we trust the total PUMA weights, high values
-                (~10000) mean want to fit the marginals.
 
         Returns:
             HouseholdAllocator: allocated persons & households_csv
 
         """
-        if gamma is not None:
-            HouseholdAllocator.GAMMA = gamma
 
         allocated_households = pandas.read_csv(households_csv)
         allocated_persons = pandas.read_csv(persons_csv)
